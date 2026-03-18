@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Read [README.md](./README.md) for project context.
+Read [AGENTS.md](./AGENTS.md) for project context.
 
 ## Build & Test
 

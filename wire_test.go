@@ -232,6 +232,52 @@ func TestNewClient_UsesWireTransport(t *testing.T) {
 	}
 }
 
+func TestValidateProxyURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		url     string
+		wantErr bool
+	}{
+		{"https is allowed", "https://proxy.example.com", false},
+		{"http is rejected", "http://proxy.example.com", true},
+		{"http localhost is allowed", "http://localhost:8080", false},
+		{"http 127.0.0.1 is allowed", "http://127.0.0.1:9090", false},
+		{"http other loopback rejected", "http://0.0.0.0:8080", true},
+		{"empty scheme rejected", "://bad", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateProxyURL(tt.url)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateProxyURL(%q) error = %v, wantErr %v", tt.url, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestTransport_RejectsHTTPProxy(t *testing.T) {
+	transport := &Transport{ProxyURL: "http://evil.example.com", Token: "secret"}
+	client := &http.Client{Transport: transport}
+
+	_, err := client.Get("https://example.com")
+	if err == nil {
+		t.Fatal("expected error for HTTP proxy URL")
+	}
+	if !strings.Contains(err.Error(), "must use HTTPS") {
+		t.Errorf("error = %q, want mention of HTTPS", err.Error())
+	}
+}
+
+func TestNewTransport_RejectsHTTPProxy(t *testing.T) {
+	t.Setenv("AXON_WIRE_URL", "http://insecure.example.com")
+	t.Setenv("AXON_WIRE_TOKEN", "secret")
+
+	transport := NewTransport()
+	if transport != nil {
+		t.Error("expected nil transport for HTTP proxy URL")
+	}
+}
+
 func TestTransport_LiveProxy(t *testing.T) {
 	proxyURL := "https://wire-proxy.ben-askins.workers.dev"
 	token := os.Getenv("AXON_WIRE_TOKEN")

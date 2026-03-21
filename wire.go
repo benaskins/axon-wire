@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 )
@@ -40,12 +41,33 @@ type proxyRequest struct {
 	Body    string            `json:"body,omitempty"`
 }
 
+// validateProxyURL checks that the proxy URL uses HTTPS to prevent
+// sending the wire token in cleartext. HTTP is allowed only for
+// localhost and 127.0.0.1 to support local development.
+func validateProxyURL(rawURL string) error {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("wire: invalid proxy URL: %w", err)
+	}
+	if u.Scheme == "https" {
+		return nil
+	}
+	host := u.Hostname()
+	if u.Scheme == "http" && (host == "localhost" || host == "127.0.0.1") {
+		return nil
+	}
+	return fmt.Errorf("wire: proxy URL must use HTTPS to protect the wire token (got %s://%s)", u.Scheme, u.Host)
+}
+
 // NewTransport creates a Transport from the AXON_WIRE_URL and
 // AXON_WIRE_TOKEN environment variables. Returns nil if AXON_WIRE_URL
 // is not set, allowing callers to fall back to direct HTTP.
 func NewTransport() *Transport {
 	proxyURL := os.Getenv("AXON_WIRE_URL")
 	if proxyURL == "" {
+		return nil
+	}
+	if err := validateProxyURL(proxyURL); err != nil {
 		return nil
 	}
 	token := os.Getenv("AXON_WIRE_TOKEN")
@@ -59,6 +81,10 @@ func NewTransport() *Transport {
 // into a JSON payload, sends it to the proxy, and reconstructs the
 // proxied response.
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if err := validateProxyURL(t.ProxyURL); err != nil {
+		return nil, err
+	}
+
 	inner := t.Inner
 	if inner == nil {
 		inner = http.DefaultTransport

@@ -1,14 +1,17 @@
-# CLAUDE.md
+@AGENTS.md
 
-Read [AGENTS.md](./AGENTS.md) for project context.
+## Conventions
+- `Transport` implements `http.RoundTripper` — used as a drop-in for `http.Client.Transport`
+- `NewClient()` returns a proxied client when `AXON_WIRE_URL` is set, plain client otherwise
+- Stdlib only — no external dependencies
 
-## Build & Test
+## Constraints
+- No dependencies on any axon-* module — this is fully standalone
+- HTTPS is enforced for the proxy URL in production; do not weaken this
+- `AXON_WIRE_TOKEN` must never appear in logs, errors, or test output
+- Do not add request/response body inspection — the transport is opaque
 
-```bash
-go test ./...              # Unit tests (no network)
-go test -v -run TestLive   # Live test (requires AXON_WIRE_TOKEN)
-```
-
-## Architecture
-
-Single file module. `Transport` implements `http.RoundTripper`, `NewClient()` is the convenience wrapper. No dependencies beyond stdlib.
+## Testing
+- `go test ./...` — unit tests with no network required
+- `go test -v -run TestLive` — live tests require `AXON_WIRE_TOKEN` env var
+- `go vet ./...` for lint

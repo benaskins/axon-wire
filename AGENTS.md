@@ -1,3 +1,8 @@
+---
+module: github.com/benaskins/axon-wire
+kind: library
+---
+
 # axon-wire
 
 HTTP transport that routes outbound requests through a Cloudflare Worker proxy. Your IP is never exposed to the target.

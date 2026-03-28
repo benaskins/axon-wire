@@ -1,0 +1,10 @@
+name: axon-wire
+purpose: HTTP transport routing through Cloudflare Worker proxy
+use_when: Outbound HTTP via proxy
+deterministic: true
+snippet:
+  imports:
+    - path: github.com/benaskins/axon-wire
+      alias: wire
+  requires:
+    - github.com/benaskins/axon-wire
